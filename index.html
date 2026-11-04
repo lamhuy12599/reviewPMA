@@ -30,7 +30,7 @@ select,input{width:100%;font:inherit;font-size:16px;padding:8px;border:1px solid
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .kpi{border-radius:10px;padding:10px;display:grid;gap:2px;font-size:12px}
 .kpi b{font-size:26px;line-height:1}
-.cA{background:var(--a);color:var(--at)}.cB{background:var(--b);color:var(--bt)}.cC{background:var(--c);color:var(--ct)}
+.cA{background:var(--a);color:var(--at)}.cB{background:var(--b);color:var(--bt)}.cC{background:var(--c);color:var(--ct)}.cN{background:#fde4e1;color:#b42318}
 .wrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
@@ -89,12 +89,12 @@ tr.cl{cursor:pointer}
     <div class="row"><button id="exp" hidden>Xuất báo cáo Excel</button><span class="mut" id="nodl" hidden>Mở trang này trong ứng dụng Claude để xuất file.</span></div></section>
   <section class="card" id="gs"><h2>Theo nhóm <span class="mut">(chạm vào một dòng để lọc)</span></h2><div class="wrap"><table id="gt"></table></div></section>
   <section class="card"><h2>Chi tiết sản phẩm</h2>
-    <div class="flt"><input id="fs" placeholder="Tìm tên sản phẩm…"><select id="fk"><option value="">Tất cả hạng</option><option>A</option><option>B</option><option>C</option><option value="0">Không bán được</option></select><select id="fg"></select></div>
+    <div class="flt"><input id="fs" placeholder="Tìm tên sản phẩm…"><select id="fk"><option value="">Tất cả hạng</option><option>A</option><option>B</option><option>C</option><option value="N">New</option><option value="0">Không bán được</option></select><select id="fg"></select></div>
     <div class="wrap"><table id="dt"></table></div><p class="mut" id="more"></p></section>
   <section class="card"><h2>Hành động theo quy tắc công ty</h2><div class="act" id="act"></div></section>
   <section class="card" id="shs"><h2>Sơ đồ trưng bày kệ (demo)</h2>
     <div class="grid"><label id="lshg">Nhóm hiển thị<select id="shg"></select></label><label>Số ô mỗi tầng kệ<input type="number" id="cols" value="5" min="2" max="12"></label></div>
-    <p class="mut" style="margin:0 0 8px">Xếp từ trái sang phải, từ trên xuống: A → B → C. Hàng mới ở trên cùng, Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, tên sản phẩm, barcode (hoặc số cửa hàng) và UPSD.</p>
+    <p class="mut" style="margin:0 0 8px">Sweet spot: góc trên-trái, theo đường chéo. A nằm gần góc trên-trái nhất, rồi B, C xa dần về góc dưới-phải. Hàng mới (không xếp hạng ABC) ở trên cùng, Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, tên sản phẩm, barcode (hoặc số cửa hàng) và UPSD.</p>
     <div id="shelf"></div></section>
 </div>
 </main>
@@ -157,15 +157,15 @@ function analyze(){
   const by=new Map();[...agg.values()].forEach(i=>{const gk=sc==='all'?'Toàn bộ':(i[sc]||'(trống)');i.grp=gk;if(!by.has(gk))by.set(gk,[]);by.get(gk).push(i)});
   items=[];groups=[];
   [...by.keys()].sort((x,y)=>x.localeCompare(y,'vi')).forEach(gk=>{
-    const L=by.get(gk).sort((x,y)=>y.q-x.q||x.n.localeCompare(y.n,'vi')),T=L.reduce((s,i)=>s+Math.max(i.q,0),0);let cum=0;
-    const gs={name:gk,n:L.length,q:T,A:0,B:0,C:0,z:0};
-    L.forEach((i,ix)=>{i.rank=ix+1;i.sh=T?Math.max(i.q,0)/T*100:0;i.prev=cum;cum+=i.sh;i.cum=cum;i.upsd=i.q/days;
-      i.k=i.q<=0?'C':i.prev<A-1e-9?'A':i.prev<A+B-1e-9?'B':'C';gs[i.k]++;if(i.q<=0)gs.z++;i.st=i.nw?'new':(i.dd||i.q<=0)?'dead':'';items.push(i)});
+    const L=by.get(gk).sort((x,y)=>y.q-x.q||x.n.localeCompare(y.n,'vi')),T=L.filter(i=>!i.nw).reduce((s,i)=>s+Math.max(i.q,0),0);let cum=0;
+    const gs={name:gk,n:L.length,q:T,A:0,B:0,C:0,N:0,z:0};
+    L.forEach((i,ix)=>{i.rank=ix+1;i.sh=i.nw||!T?0:Math.max(i.q,0)/T*100;i.prev=cum;cum+=i.sh;i.cum=cum;i.upsd=i.q/days;
+      i.k=i.nw?'N':i.q<=0?'C':i.prev<A-1e-9?'A':i.prev<A+B-1e-9?'B':'C';gs[i.k]++;if(i.q<=0)gs.z++;i.st=i.nw?'new':(i.dd||i.q<=0)?'dead':'';items.push(i)});
     groups.push(gs)});
   P={A,B,C:100-A-B,days,sc,m,del:nDel,tot:nTot};render();$('#out').hidden=false;sync()}
 
 function render(){
-  const T=items.reduce((s,i)=>s+Math.max(i.q,0),0),cs={A:{n:0,q:0},B:{n:0,q:0},C:{n:0,q:0}};
+  const T=items.filter(i=>i.k!=='N').reduce((s,i)=>s+Math.max(i.q,0),0),cs={A:{n:0,q:0},B:{n:0,q:0},C:{n:0,q:0},N:{n:0,q:0}};
   items.forEach(i=>{cs[i.k].n++;cs[i.k].q+=Math.max(i.q,0)});P.cs=cs;P.T=T;
   $('#cards').innerHTML=['A','B','C'].map(k=>`<div class="kpi c${k}"><b>${k}</b><span>${cs[k].n} SKU (${pct(cs[k].n,items.length)})</span><span>${pct(cs[k].q,T)} doanh số</span><span>UPSD ${fmt(cs[k].q/P.days)}</span></div>`).join('');
   $('#skip').textContent=`UPSD = Tổng số lượng ÷ ${P.days} ngày · Tổng UPSD ${fmt(T/P.days)}`+(P.del?` · Đã loại ${P.del} dòng Deleted Item`:'')+(P.tot?` · Bỏ qua ${P.tot} dòng tổng`:'');
@@ -196,11 +196,18 @@ function list(){
 
 function tile(i){
   const t=i.st==='new'?'<span class="tg new">NEW</span>':i.st==='dead'?'<span class="tg dead">DEADSTOCK</span>':'';
-  return `<div class="t c${i.k}${i.st?' '+i.st:''}"><div class="th"><span class="l">${i.k}</span>${t}</div><div class="nm">${esc(i.n)}</div><div class="bc">${P.m.b>=0?(esc(i.b)||'Chưa có barcode'):(P.m.ns>=0&&i.ns?fmt(i.ns)+' cửa hàng':esc(i.c))}</div><div class="u">UPSD ${fmt(i.upsd)}</div></div>`}
+  return `<div class="t c${i.k}${i.st?' '+i.st:''}"><div class="th"><span class="l">${i.k==='N'?'NEW':i.k}</span>${t}</div><div class="nm">${esc(i.n)}</div><div class="bc">${P.m.b>=0?(esc(i.b)||'Chưa có barcode'):(P.m.ns>=0&&i.ns?fmt(i.ns)+' cửa hàng':esc(i.c))}</div><div class="u">UPSD ${fmt(i.upsd)}</div></div>`}
+function bandGrid(a,n){
+  if(!a.length)return '';const R=Math.ceil(a.length/n),cells=[];
+  for(let r=0;r<R;r++)for(let c=0;c<n;c++)cells.push([r,c]);
+  const cost=(r,c)=>(R>1?r/(R-1):0)+(n>1?c/(n-1):0);
+  cells.sort((x,y)=>cost(...x)-cost(...y)||x[0]-y[0]||x[1]-y[1]);
+  const g=Array(R*n).fill('<div></div>');a.forEach((it,ix)=>{const [r,c]=cells[ix];g[r*n+c]=tile(it)});
+  return `<div class="band"><b>Kệ chính: sweet spot A → B → C</b> <span class="mut">${a.length} SKU · ${R} tầng × ${n} ô</span></div><div class="wrap"><div class="shelf bm" style="--cols:${n}">${g.join('')}</div></div>`}
 function shelf(){
   const g=$('#shg').value,n=Math.max(2,Math.min(12,+$('#cols').value||5)),L=items.filter(i=>i.grp===g),CAP=400;
   const band=(t,a,c)=>a.length?`<div class="band ${c}"><b>${t}</b> <span class="mut">${a.length} SKU${a.length>CAP?' · hiển thị '+CAP:''}</span></div><div class="wrap"><div class="shelf ${c}" style="--cols:${n}">${a.slice(0,CAP).map(tile).join('')}</div></div>`:'';
-  $('#shelf').innerHTML=band('Sản phẩm mới',L.filter(i=>i.st==='new'),'bn')+band('Kệ chính: A → B → C',L.filter(i=>!i.st),'bm')+band('Deadstock',L.filter(i=>i.st==='dead'),'bdead')||'<p class="mut">Chưa có dữ liệu.</p>'}
+  $('#shelf').innerHTML=band('Sản phẩm mới',L.filter(i=>i.st==='new'),'bn')+bandGrid(L.filter(i=>!i.st),n)+band('Deadstock',L.filter(i=>i.st==='dead'),'bdead')||'<p class="mut">Chưa có dữ liệu.</p>'}
 $('#shg').onchange=shelf;$('#cols').oninput=shelf;
 ['scope','days','pa','pb'].forEach(id=>$('#'+id).onchange=analyze);
 
