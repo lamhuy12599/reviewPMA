@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>ABC Product Analysis – 7-Eleven</title>
+<style>
+:root{--bg:#f6f6f3;--card:#fff;--tx:#1d1d1b;--mut:#6b6b66;--bd:#e2e2dc;--pri:#00803e;--prit:#fff;--a:#bfe6b3;--at:#14532d;--b:#fbc78f;--bt:#7c2d12;--c:#fdeaa0;--ct:#713f12;--er:#b42318;
+color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--bd)}
+.stripe{height:5px;background:linear-gradient(90deg,#f58220 33%,#00803e 33% 66%,#ee2737 66%)}
+header div.in{padding:14px 16px}
+h1{font-size:20px;margin:0}h2{font-size:16px;margin:0 0 10px}
+header p{margin:2px 0 0;color:var(--mut);font-size:13px}
+main{max-width:1000px;margin:0 auto;padding:14px 12px 40px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.drop{display:block;border:2px dashed var(--bd);border-radius:10px;padding:22px 12px;text-align:center;cursor:pointer}
+.drop.on{border-color:var(--pri)}
+.drop b{display:block;font-size:16px}.drop span,.mut{color:var(--mut);font-size:13px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:9px 14px;background:var(--pri);color:var(--prit);cursor:pointer}
+button.ghost{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}
+label{display:grid;gap:3px;font-size:12px;color:var(--mut)}
+select,input{width:100%;font:inherit;font-size:16px;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx)}
+.err{color:var(--er);margin:8px 0 0}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{border-radius:10px;padding:10px;display:grid;gap:2px;font-size:12px}
+.kpi b{font-size:26px;line-height:1}
+.cA{background:var(--a);color:var(--at)}.cB{background:var(--b);color:var(--bt)}.cC{background:var(--c);color:var(--ct)}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
+th{color:var(--mut);font-weight:600;font-size:12px}
+td.n,th.n{text-align:right}
+td.p{white-space:normal;min-width:180px}
+tr.cl{cursor:pointer}
+.bd{display:inline-block;min-width:24px;text-align:center;border-radius:6px;padding:1px 6px;font-weight:700}
+.act{display:grid;gap:8px;font-size:13px}
+.act div{border-radius:8px;padding:8px 10px}
+.act ul{margin:4px 0 0;padding-left:18px}
+.flt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.flt input{grid-column:1/-1}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px}
+.band{margin:12px 0 6px;font-size:13px;padding-left:8px;border-left:4px solid var(--pri)}
+.band.bn{border-color:var(--er)}.band.bdead{border-color:var(--mut)}
+.shelf{display:grid;grid-template-columns:repeat(var(--cols,5),minmax(96px,1fr));gap:6px;min-width:calc(var(--cols,5)*100px);background:#ecece6;border-radius:10px;padding:6px}
+.shelf.bn{background:#fde4e1}
+.t{border-radius:8px;padding:6px 7px;display:flex;flex-direction:column;gap:3px;font-size:11px;line-height:1.25;border:1px solid rgba(0,0,0,.08);min-width:0}
+.t .th{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.t .l{font-size:26px;font-weight:800;line-height:1}
+.t .nm{font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word}
+.t .bc{font-size:10px;opacity:.75;word-break:break-all}
+.t .u{font-weight:700;margin-top:auto}
+.tg{font-size:9px;font-weight:700;border-radius:4px;padding:1px 4px;color:#fff}
+.tg.new{background:var(--er)}.tg.dead{background:#6b6b66}
+.t.new{border:2px solid var(--er)}
+.t.dead{background:#ececea;color:#55554f}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="stripe"></div><div class="in"><h1>ABC Product Analysis</h1><p>Phân loại sản phẩm A–B–C theo quy tắc của công ty</p></div></header>
+<main>
+<section class="card">
+  <label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls,.csv" hidden><b>Chọn file dữ liệu gốc</b><span>.xlsx, .xls hoặc .csv — hoặc kéo thả vào đây</span></label>
+  <div class="row"><button class="ghost" id="sample" hidden>Tải file mẫu</button><span class="mut" id="fn"></span></div>
+  <p class="err" id="err" hidden></p>
+</section>
+
+<section class="card" id="cfg" hidden>
+  <h2>Cấu hình phân tích</h2>
+  <p class="mut" style="margin:0 0 8px">Cột đã được nhận diện tự động, bạn có thể chọn lại nếu chưa đúng. Cột “Trạng thái”: <b>New Item</b> = hàng mới, <b>Dead Item</b> = deadstock, <b>Deleted Item</b> = đã xóa (loại khỏi phân tích). <b>UPSD = Tổng số lượng 4 tuần ÷ số ngày</b>; các dòng “Tổng…” ở cuối file được bỏ qua.</p>
+  <div class="grid" id="maps"></div>
+  <div class="grid">
+    <label>Phân tích theo<select id="scope"><option value="all">Toàn bộ danh sách</option><option value="g">Group</option><option value="c" selected>Category</option><option value="s">Subcategory</option></select></label>
+    <label>Số ngày dữ liệu<input type="number" id="days" value="28" min="1"></label>
+    <label>Nhóm A (% doanh số)<input type="number" id="pa" value="20" min="0" max="100"></label>
+    <label>Nhóm B (% doanh số)<input type="number" id="pb" value="30" min="0" max="100"></label>
+    <label>Nhóm C (còn lại)<input id="pc" disabled></label>
+  </div>
+</section>
+
+<div id="out" hidden style="display:grid;gap:14px">
+  <section class="card"><h2>Tổng quan</h2><div class="kpis" id="cards"></div><p class="mut" id="skip" style="margin:8px 0 0"></p>
+    <div class="row"><button id="exp" hidden>Xuất báo cáo Excel</button><span class="mut" id="nodl" hidden>Mở trang này trong ứng dụng Claude để xuất file.</span></div></section>
+  <section class="card" id="gs"><h2>Theo nhóm <span class="mut">(chạm vào một dòng để lọc)</span></h2><div class="wrap"><table id="gt"></table></div></section>
+  <section class="card"><h2>Chi tiết sản phẩm</h2>
+    <div class="flt"><input id="fs" placeholder="Tìm tên sản phẩm…"><select id="fk"><option value="">Tất cả hạng</option><option>A</option><option>B</option><option>C</option><option value="0">Không bán được</option></select><select id="fg"></select></div>
+    <div class="wrap"><table id="dt"></table></div><p class="mut" id="more"></p></section>
+  <section class="card"><h2>Hành động theo quy tắc công ty</h2><div class="act" id="act"></div></section>
+  <section class="card" id="shs"><h2>Sơ đồ trưng bày kệ (demo)</h2>
+    <div class="grid"><label id="lshg">Nhóm hiển thị<select id="shg"></select></label><label>Số ô mỗi tầng kệ<input type="number" id="cols" value="5" min="2" max="12"></label></div>
+    <p class="mut" style="margin:0 0 8px">Xếp từ trái sang phải, từ trên xuống: A → B → C. Hàng mới ở trên cùng, Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, tên sản phẩm, barcode (hoặc số cửa hàng) và UPSD.</p>
+    <div id="shelf"></div></section>
+</div>
+</main>
+<div id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nrm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
+const KEYS=[['n','Tên sản phẩm'],['g','Group'],['c','Category'],['s','Subcategory'],['q','Tổng số lượng 4 tuần (UPSD = SL ÷ số ngày)'],['b','Barcode (không bắt buộc)'],['w','Trạng thái (New / Dead / Deleted Item)'],['wo','Write-off 4 tuần'],['mk','MKT UPSD'],['ns','Số lượng cửa hàng']];
+const SC={all:'Toàn bộ danh sách',g:'Group',c:'Category',s:'Subcategory'};
+let head=[],data=[],fname='',items=[],groups=[],dl=null,P={};
+const pct=(a,b)=>b?(a/b*100).toFixed(1)+'%':'0%';
+const fmt=v=>Number.isInteger(v)?v.toLocaleString('vi-VN'):v.toLocaleString('vi-VN',{maximumFractionDigits:2});
+function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
+function err(t){const e=$('#err');e.textContent=t||'';e.hidden=!t}
+function sync(){$('#sample').hidden=!dl;$('#exp').hidden=!dl;$('#nodl').hidden=!!dl||!items.length}
+try{Promise.resolve(window.claude&&claude.use('downloads')).then(d=>{dl=d||null;sync()}).catch(()=>{})}catch(e){}
+
+function num(v){if(typeof v==='number')return v;let s=String(v).trim();if(!s)return 0;
+  if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(/,/g,'');
+  const n=parseFloat(s.replace(/[^\d.-]/g,''));return isNaN(n)?0:n}
+
+async function pick(f){if(!f)return;err('');
+  try{const wb=/\.csv$/i.test(f.name)?XLSX.read(await f.text(),{type:'string'}):XLSX.read(await f.arrayBuffer(),{type:'array'});
+    init(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}),f.name)}
+  catch(x){err('Không đọc được file: '+x.message)}}
+
+function init(a,name){
+  a=a.filter(r=>r.some(c=>String(c).trim()));if(a.length<2)return err('File không có dữ liệu.');
+  let hi=0,best=0;a.slice(0,15).forEach((r,i)=>{const n=r.filter(c=>typeof c==='string'&&c.trim()).length;if(n>best){best=n;hi=i}});
+  head=a[hi].map((h,i)=>String(h).trim()||'Cột '+(i+1));data=a.slice(hi+1);fname=name;
+  const H=head.map(nrm),used=new Set(),ne=i=>data.some(r=>String(r[i]).trim()!==''),
+    find=(res,ex,chk)=>{for(const re of [].concat(res)){const i=H.findIndex((h,i)=>!used.has(i)&&re.test(h)&&!(ex&&ex.test(h))&&(!chk||ne(i)));if(i>=0){used.add(i);return i}}return -1};
+  const g={};g.s=find(/sub|nhom con|phan nhom/,0,1);g.c=find(/categor|nganh|danh muc/,/sub/,1);g.g=find(/group|product class|nhom/,0,1);
+  g.b=find(/barcode|ma vach|\bean\b|\bupc\b|gtin|sku|ma hang|ma sp/);g.w=find([/trang thai|status/,/\bnew\b|moi|ra mat|launch/]);
+  g.n=find([/^ten san pham|^ten sp|^product name|^ten/,/ten san|name|san pham|item|desc|mo ta/]);
+  g.q=find([/tong so luong|total qty|total quantity|so luong 4|28 ngay|28 days/,/qty|quantity|so luong|^sl|sold|unit/,/sales|ban/],/cua hang|store|write|\bwo\b/);
+  g.wo=find(/write.?off|\bwo\b/);g.mk=find(/upsd/);g.ns=find(/so luong cua hang|so cua hang|store/);
+  if(g.q<0)for(let i=head.length-1;i>=0;i--){if(used.has(i))continue;const v=data.slice(0,30).map(r=>r[i]);if(v.filter(x=>x!==''&&!isNaN(num(x))&&num(x)!==0).length>v.length/2){g.q=i;break}}
+  $('#maps').innerHTML=KEYS.map(([k,l])=>`<label>${l}<select id="m_${k}"><option value="-1">— không có —</option>${head.map((h,i)=>`<option value="${i}">${esc(h)}</option>`).join('')}</select></label>`).join('');
+  KEYS.forEach(([k])=>{const s=$('#m_'+k);s.value=g[k];s.onchange=analyze});
+  $('#fn').textContent=name+' · '+data.length+' dòng';$('#cfg').hidden=false;analyze()}
+
+const stat=v=>{const s=nrm(v).trim();return /delet|xoa|\bdel\b/.test(s)?'del':/dead/.test(s)?'dead':/new|moi|^(x|1|co|yes|y|true)$/.test(s)?'new':''};
+function analyze(){
+  err('');const m={};KEYS.forEach(([k])=>m[k]=+$('#m_'+k).value);
+  ['g','c','s'].forEach(k=>{const o=$('#scope').querySelector(`[value=${k}]`);o.disabled=m[k]<0});
+  let sc=$('#scope').value;if(sc!=='all'&&m[sc]<0){sc='all';$('#scope').value='all'}
+  const A=+$('#pa').value||0,B=+$('#pb').value||0,days=+$('#days').value||28;
+  if(A+B>100){$('#pc').value='';return err('Tổng nhóm A và B không được vượt quá 100%.')}
+  $('#pc').value=(100-A-B)+'%';
+  if(m.n<0||m.q<0){$('#out').hidden=true;return err('Cần chọn tối thiểu cột Tên sản phẩm và Số lượng bán.')}
+  const agg=new Map(),txt=(r,k)=>m[k]>=0?String(r[m[k]]).trim():'',nv=(r,k)=>m[k]>=0?num(r[m[k]]):0;let nDel=0,nTot=0;
+  data.forEach(r=>{const n=txt(r,'n');if(!n)return;if(/^(tong|total|grand total|sum)\b/.test(nrm(n))){nTot++;return}
+    const st=stat(txt(r,'w'));if(st==='del'){nDel++;return}
+    const g=txt(r,'g'),c=txt(r,'c'),s=txt(r,'s'),key=[n,g,c,s].join('|'),q=num(r[m.q]),b=txt(r,'b'),o=agg.get(key);
+    if(o){o.q+=q;o.wo+=nv(r,'wo');if(!o.b)o.b=b;if(st==='new')o.nw=true;if(st==='dead')o.dd=true}
+    else agg.set(key,{n,g,c,s,q,b,nw:st==='new',dd:st==='dead',wo:nv(r,'wo'),mk:nv(r,'mk'),ns:nv(r,'ns')})});
+  const by=new Map();[...agg.values()].forEach(i=>{const gk=sc==='all'?'Toàn bộ':(i[sc]||'(trống)');i.grp=gk;if(!by.has(gk))by.set(gk,[]);by.get(gk).push(i)});
+  items=[];groups=[];
+  [...by.keys()].sort((x,y)=>x.localeCompare(y,'vi')).forEach(gk=>{
+    const L=by.get(gk).sort((x,y)=>y.q-x.q||x.n.localeCompare(y.n,'vi')),T=L.reduce((s,i)=>s+Math.max(i.q,0),0);let cum=0;
+    const gs={name:gk,n:L.length,q:T,A:0,B:0,C:0,z:0};
+    L.forEach((i,ix)=>{i.rank=ix+1;i.sh=T?Math.max(i.q,0)/T*100:0;i.prev=cum;cum+=i.sh;i.cum=cum;i.upsd=i.q/days;
+      i.k=i.q<=0?'C':i.prev<A-1e-9?'A':i.prev<A+B-1e-9?'B':'C';gs[i.k]++;if(i.q<=0)gs.z++;i.st=i.nw?'new':(i.dd||i.q<=0)?'dead':'';items.push(i)});
+    groups.push(gs)});
+  P={A,B,C:100-A-B,days,sc,m,del:nDel,tot:nTot};render();$('#out').hidden=false;sync()}
+
+function render(){
+  const T=items.reduce((s,i)=>s+Math.max(i.q,0),0),cs={A:{n:0,q:0},B:{n:0,q:0},C:{n:0,q:0}};
+  items.forEach(i=>{cs[i.k].n++;cs[i.k].q+=Math.max(i.q,0)});P.cs=cs;P.T=T;
+  $('#cards').innerHTML=['A','B','C'].map(k=>`<div class="kpi c${k}"><b>${k}</b><span>${cs[k].n} SKU (${pct(cs[k].n,items.length)})</span><span>${pct(cs[k].q,T)} doanh số</span><span>UPSD ${fmt(cs[k].q/P.days)}</span></div>`).join('');
+  $('#skip').textContent=`UPSD = Tổng số lượng ÷ ${P.days} ngày · Tổng UPSD ${fmt(T/P.days)}`+(P.del?` · Đã loại ${P.del} dòng Deleted Item`:'')+(P.tot?` · Bỏ qua ${P.tot} dòng tổng`:'');
+  $('#gs').hidden=P.sc==='all';
+  $('#gt').innerHTML='<tr><th>'+SC[P.sc]+'</th><th class="n">SKU</th><th class="n">A</th><th class="n">B</th><th class="n">C</th><th class="n">Không bán</th></tr>'+
+    groups.map(g=>`<tr class="cl" data-g="${esc(g.name)}"><td>${esc(g.name)}</td><td class="n">${g.n}</td><td class="n">${g.A}</td><td class="n">${g.B}</td><td class="n">${g.C}</td><td class="n">${g.z}</td></tr>`).join('');
+  $('#gt').querySelectorAll('tr.cl').forEach(r=>r.onclick=()=>{$('#fg').value=r.dataset.g;list();$('#dt').scrollIntoView({behavior:'smooth'})});
+  $('#fg').innerHTML='<option value="">Tất cả nhóm</option>'+groups.map(g=>`<option>${esc(g.name)}</option>`).join('');$('#fg').hidden=P.sc==='all';
+  const z=items.filter(i=>i.q<=0).length;
+  $('#act').innerHTML=`<div class="cA"><b>Nhóm A</b> (${P.A}% doanh số, ${cs.A.n} SKU)<ul><li>Trưng bày vị trí tốt nhất (sweet spot), tăng facing</li><li>Duy trì facing, trữ hàng đầy đủ; luôn có hàng</li></ul></div>
+  <div class="cB"><b>Nhóm B</b> (${P.B}% doanh số, ${cs.B.n} SKU)<ul><li>Trưng bày các vị trí tiếp theo, duy trì facing và trữ hàng tối thiểu</li></ul></div>
+  <div class="cC"><b>Nhóm C</b> (${P.C}% doanh số, ${cs.C.n} SKU)<ul><li>Trưng bày các vị trí còn lại, giảm facing tối thiểu</li><li>Review và rotate trưng bày mỗi tháng; xem xét remove nếu không đủ performance sau 1 tháng${z?`. Hiện có <b>${z}</b> SKU không bán được trong kỳ`:''}</li></ul></div>`;
+  const pv=$('#shg').value;$('#shg').innerHTML=groups.map(g=>`<option>${esc(g.name)}</option>`).join('');if(groups.some(g=>g.name===pv))$('#shg').value=pv;$('#lshg').hidden=P.sc==='all';
+  list();shelf()}
+
+function list(){
+  const q=nrm($('#fs').value),k=$('#fk').value,g=$('#fg').value,m=P.m;
+  const cols=[['rank','#','n'],['n','Sản phẩm','p'],['b','Barcode'],['g','Group'],['c','Category'],['s','Subcategory'],['st','Trạng thái'],['ns','Cửa hàng','n'],['q','SL bán','n'],['upsd','UPSD','n'],['mk','MKT UPSD','n'],['wo','WO','n'],['sh','% DS','n'],['cum','% lũy kế','n'],['k','Hạng']].filter(c=>c[0]==='st'?m.w>=0:!{g:1,c:1,s:1,b:1,ns:1,mk:1,wo:1}[c[0]]||m[c[0]]>=0);
+  const L=items.filter(i=>(!q||nrm(i.n).includes(q))&&(!g||i.grp===g)&&(!k||(k==='0'?i.q<=0:i.k===k)));
+  $('#dt').innerHTML='<tr>'+cols.map(c=>`<th class="${c[2]||''}">${c[1]}</th>`).join('')+'</tr>'+L.slice(0,200).map(i=>'<tr>'+cols.map(c=>{const v=i[c[0]];
+    if(c[0]==='k')return `<td><span class="bd c${v}">${v}</span></td>`;
+    if(c[0]==='st')return `<td>${v==='new'?'New':v==='dead'?'Dead':''}</td>`;
+    if(['upsd','q','ns','mk','wo'].includes(c[0]))return `<td class="n">${fmt(v)}</td>`;
+    if(c[0]==='sh'||c[0]==='cum')return `<td class="n">${v.toFixed(1)}%</td>`;
+    return `<td class="${c[2]||''}">${esc(v)}</td>`}).join('')+'</tr>').join('');
+  $('#more').textContent=L.length>200?`Hiển thị 200/${L.length} sản phẩm. Báo cáo Excel có đầy đủ.`:`${L.length} sản phẩm`}
+['fs','fk','fg'].forEach(id=>$('#'+id).oninput=list);
+
+function tile(i){
+  const t=i.st==='new'?'<span class="tg new">NEW</span>':i.st==='dead'?'<span class="tg dead">DEADSTOCK</span>':'';
+  return `<div class="t c${i.k}${i.st?' '+i.st:''}"><div class="th"><span class="l">${i.k}</span>${t}</div><div class="nm">${esc(i.n)}</div><div class="bc">${P.m.b>=0?(esc(i.b)||'Chưa có barcode'):(P.m.ns>=0&&i.ns?fmt(i.ns)+' cửa hàng':esc(i.c))}</div><div class="u">UPSD ${fmt(i.upsd)}</div></div>`}
+function shelf(){
+  const g=$('#shg').value,n=Math.max(2,Math.min(12,+$('#cols').value||5)),L=items.filter(i=>i.grp===g),CAP=400;
+  const band=(t,a,c)=>a.length?`<div class="band ${c}"><b>${t}</b> <span class="mut">${a.length} SKU${a.length>CAP?' · hiển thị '+CAP:''}</span></div><div class="wrap"><div class="shelf ${c}" style="--cols:${n}">${a.slice(0,CAP).map(tile).join('')}</div></div>`:'';
+  $('#shelf').innerHTML=band('Sản phẩm mới',L.filter(i=>i.st==='new'),'bn')+band('Kệ chính: A → B → C',L.filter(i=>!i.st),'bm')+band('Deadstock',L.filter(i=>i.st==='dead'),'bdead')||'<p class="mut">Chưa có dữ liệu.</p>'}
+$('#shg').onchange=shelf;$('#cols').oninput=shelf;
+['scope','days','pa','pb'].forEach(id=>$('#'+id).onchange=analyze);
+
+async function save(wb,name){
+  try{await dl.save({filename:name,data:XLSX.write(wb,{bookType:'xlsx',type:'array'})})}
+  catch(e){if(e&&e.code!=='declined')toast('Không lưu được file ('+(e.code||'lỗi')+')')}}
+function sheet(rows,w){const s=XLSX.utils.aoa_to_sheet(rows);s['!cols']=w.map(x=>({wch:x}));return s}
+function exp(){
+  if(!dl||!items.length)return;const wb=XLSX.utils.book_new(),cs=P.cs;
+  const ov=[['ABC PRODUCT ANALYSIS – 7-ELEVEN'],['File nguồn',fname],['Phân tích theo',SC[P.sc]],['Số ngày dữ liệu',P.days],
+    ['Ngưỡng A / B / C (% doanh số lũy kế)',P.A+'% / '+P.B+'% / '+P.C+'%'],['Công thức UPSD','Tổng số lượng ÷ '+P.days+' ngày'],['Tổng SKU',items.length],['Tổng số lượng bán',P.T],['Dòng Deleted Item đã loại',P.del],[],
+    ['Hạng','Số SKU','% SKU','Số lượng bán','% doanh số','UPSD (tổng)']];
+  ['A','B','C'].forEach(k=>ov.push([k,cs[k].n,+(cs[k].n/items.length*100).toFixed(1),cs[k].q,+(P.T?cs[k].q/P.T*100:0).toFixed(1),+(cs[k].q/P.days).toFixed(2)]));
+  XLSX.utils.book_append_sheet(wb,sheet(ov,[38,18,10,14,12,14]),'Tổng quan');
+  XLSX.utils.book_append_sheet(wb,sheet([[SC[P.sc],'Số SKU','Nhóm A','Nhóm B','Nhóm C','SKU không bán','Tổng SL bán']].concat(groups.map(g=>[g.name,g.n,g.A,g.B,g.C,g.z,g.q])),[34,10,10,10,10,14,12]),'Theo nhóm');
+  const m=P.m,CD=[['Nhóm phân tích',i=>i.grp,24],['Thứ hạng',i=>i.rank,9],['Tên sản phẩm',i=>i.n,42],['Barcode',i=>i.b,16,'b'],['Group',i=>i.g,16,'g'],['Category',i=>i.c,20,'c'],['Subcategory',i=>i.s,20,'s'],
+    ['Trạng thái',i=>i.st==='new'?'New':i.st==='dead'?'Deadstock':'',12],['Số cửa hàng',i=>i.ns,12,'ns'],['SL bán',i=>i.q,10],['UPSD',i=>+i.upsd.toFixed(2),9],['MKT UPSD',i=>+i.mk.toFixed(2),11,'mk'],['WO 4 tuần',i=>i.wo,11,'wo'],
+    ['% doanh số',i=>+i.sh.toFixed(2),11],['% lũy kế',i=>+i.cum.toFixed(2),10],['Hạng ABC',i=>i.k,9]].filter(c=>!c[3]||m[c[3]]>=0),
+    hd=CD.map(c=>c[0]),row=i=>CD.map(c=>c[1](i)),w=CD.map(c=>c[2]);
+  XLSX.utils.book_append_sheet(wb,sheet([hd].concat(items.map(row)),w),'Chi tiết ABC');
+  XLSX.utils.book_append_sheet(wb,sheet([hd].concat(items.filter(i=>i.q<=0).map(row)),w),'Không bán được');
+  save(wb,'ABC_Report_'+new Date().toISOString().slice(0,10)+'.xlsx')}
+$('#exp').onclick=exp;
+
+$('#sample').onclick=()=>{
+  const r=[['Tên sản phẩm','Product Class','Category','Trạng thái','Carry *','Reg','Min','#F','Tổng write-off 4 tuần','Tổng số lượng 4 tuần','MKT UPSD','Số lượng cửa hàng'],
+  ['Sandwich Ngũ Cốc Ức Gà','','Sandwiches','','C','On',0,0,9,89,18.01,143],['Sandwich Trứng Mayo','','Sandwiches','','C','On',0,0,11,74,27.97,144],
+  ['Cơm Nắm Bò Nướng','','Onigiri','','C','On',0,0,6,72,44.1,144],['Cơm Trộn Rong Biển','','Onigiri','New Item','C','On',0,0,2,6,33.4,144],
+  ['Bánh Mì Kem Vani','','Fresh Bakery','Dead Item','C','On',0,0,0,0,4.9,124],['Cơm Chiên Dương Châu','','Packaged Rice Lunch Box','Deleted Item','C','Off',0,0,0,0,0,7],
+  ['Tổng Doanh số','','','','','','','','',241,'','']];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,sheet(r,[34,12,22,14,8,6,6,6,12,12,10,12]),'ABC Weekly');save(wb,'File_mau_ABC.xlsx')};
+
+const dz=$('#drop');
+$('#file').onchange=e=>pick(e.target.files[0]);
+dz.ondragover=e=>{e.preventDefault();dz.classList.add('on')};dz.ondragleave=()=>dz.classList.remove('on');
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove('on');pick(e.dataTransfer.files[0])};
+</script>
+</body>
+</html>
