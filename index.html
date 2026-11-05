@@ -102,8 +102,8 @@ tr.cl{cursor:pointer}
     <div class="wrap"><table id="dt"></table></div><p class="mut" id="more"></p></section>
   <section class="card"><h2>Hành động theo quy tắc công ty</h2><div class="act" id="act"></div></section>
   <section class="card" id="shs"><h2>Sơ đồ trưng bày kệ (demo)</h2>
-    <div class="grid"><label>Category<select id="shc"></select></label><label>Quy cách (Base UOM)<select id="shu"></select></label><label>Số mâm / gondola<input type="number" id="shm" value="5" min="1" max="12"></label><label>Độ rộng từng mâm (facing)<input type="text" id="cols" value="12" placeholder="VD: 12,12,10,8" inputmode="numeric"></label><label>Facing mỗi SKU nhóm A<input type="number" id="fcA" value="3" min="1" max="12"></label><label>Facing mỗi SKU nhóm B<input type="number" id="fcB" value="2" min="1" max="12"></label><label>Facing mỗi SKU nhóm C<input type="number" id="fcC" value="1" min="1" max="12"></label></div>
-    <p class="mut" style="margin:0 0 8px">Lọc theo Category → quy cách (Base UOM) → xếp theo hạng ABC. Mỗi quy cách chia thành các gondola (theo số mâm và độ rộng mâm tính bằng facing); mỗi SKU chiếm số facing theo hạng A, B, C và được xếp từ góc trên-trái (sweet spot). Hàng mới ở trên cùng, Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, số facing (×n), tên sản phẩm, 6 số cuối barcode và UPSD. Độ rộng mâm: nhập 1 số để áp dụng cho mọi mâm, hoặc nhiều số cách nhau bằng dấu phẩy cho từng mâm từ trên xuống (VD 12,12,10,8; thiếu thì lấy số cuối).</p>
+    <div class="grid"><label>Category<select id="shc"></select></label><label>Quy cách (Base UOM)<select id="shu"></select></label><label>Tên brand / sản phẩm<input type="text" id="shb" placeholder="VD: Lays, Coca…" autocomplete="off"></label><label>Số mâm / gondola<input type="number" id="shm" value="5" min="1" max="12"></label><label>Độ rộng từng mâm (facing)<input type="text" id="cols" value="12" placeholder="VD: 12,12,10,8" inputmode="numeric"></label><label>Facing mỗi SKU nhóm A<input type="number" id="fcA" value="3" min="1" max="12"></label><label>Facing mỗi SKU nhóm B<input type="number" id="fcB" value="2" min="1" max="12"></label><label>Facing mỗi SKU nhóm C<input type="number" id="fcC" value="1" min="1" max="12"></label></div>
+    <p class="mut" style="margin:0 0 8px">Lọc theo Category → quy cách (Base UOM) → tên brand/sản phẩm → xếp theo hạng ABC. Mỗi quy cách chia thành các gondola (theo số mâm và độ rộng mâm tính bằng facing); mỗi SKU chiếm số facing theo hạng A, B, C và được xếp từ góc trên-trái (sweet spot). Hàng mới ở trên cùng, Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, số facing (×n), tên sản phẩm, 6 số cuối barcode và UPSD. Độ rộng mâm: nhập 1 số để áp dụng cho mọi mâm, hoặc nhiều số cách nhau bằng dấu phẩy cho từng mâm từ trên xuống (VD 12,12,10,8; thiếu thì lấy số cuối).</p>
     <div id="shelf"></div></section>
 </div>
 </main>
@@ -248,14 +248,14 @@ function gondolas(a,Wl,M,F){const W=Math.max(...Wl),cap=Wl.reduce((s,x)=>s+x,0);
   return `<div class="band"><b>Kệ chính: sweet spot A → B → C</b> <span class="mut">${a.length} SKU · ${G.length} gondola · A ${cnt.A} SKU/${fq.A} facing · B ${cnt.B} SKU/${fq.B} facing · C ${cnt.C} SKU/${fq.C} facing</span></div>${gh}`}
 const UO=a=>[...new Set(a.map(i=>i.uom))].sort((x,y)=>x.localeCompare(y,'vi'));
 function shelf(){
-  const c0=$('#shc').value,iv=(id,d)=>Math.max(1,Math.min(12,Math.round(+$('#'+id).value)||d)),M=iv('shm',5),ws=($('#cols').value.match(/\d+/g)||[]).map(x=>Math.max(1,Math.min(40,+x))),Wl=Array.from({length:M},(_,r)=>ws.length?ws[Math.min(r,ws.length-1)]:12),n=Math.max(...Wl),F={A:iv('fcA',3),B:iv('fcB',2),C:iv('fcC',1)},L=items.filter(i=>i.cat===c0),us=UO(L),pu=$('#shu').value,CAP=400,K={A:0,B:1,C:2};
+  const c0=$('#shc').value,q=cn($('#shb').value),iv=(id,d)=>Math.max(1,Math.min(12,Math.round(+$('#'+id).value)||d)),M=iv('shm',5),ws=($('#cols').value.match(/\d+/g)||[]).map(x=>Math.max(1,Math.min(40,+x))),Wl=Array.from({length:M},(_,r)=>ws.length?ws[Math.min(r,ws.length-1)]:12),n=Math.max(...Wl),F={A:iv('fcA',3),B:iv('fcB',2),C:iv('fcC',1)},L=items.filter(i=>i.cat===c0),us=UO(L),pu=$('#shu').value,CAP=400,K={A:0,B:1,C:2};
   $('#shu').innerHTML='<option value="">Tất cả quy cách ('+us.length+')</option>'+us.map(u=>`<option>${esc(u)}</option>`).join('');
   if(us.includes(pu))$('#shu').value=pu;
   const u0=$('#shu').value,
     band=(t,a,c)=>a.length?`<div class="band ${c}"><b>${t}</b> <span class="mut">${a.length} SKU${a.length>CAP?' · hiển thị '+CAP:''}</span></div><div class="wrap"><div class="shelf ${c}" style="--cols:${Math.min(n,6)}">${a.slice(0,CAP).map(x=>tile(x)).join('')}</div></div>`:'';
-  $('#shelf').innerHTML=(u0?[u0]:us).map(x=>{const a=L.filter(i=>i.uom===x);
-    return `<div class="bu"><b>Quy cách: ${esc(x)}</b> <span class="mut">${a.length} SKU</span></div>`+band('Sản phẩm mới',a.filter(i=>i.st==='new'),'bn')+gondolas(a.filter(i=>!i.st).sort((p,q)=>K[p.k]-K[q.k]||q.upsd-p.upsd),Wl,M,F)+band('Deadstock',a.filter(i=>i.st==='dead'),'bdead')}).join('')||'<p class="mut">Chưa có dữ liệu.</p>'}
-$('#shc').onchange=()=>{$('#shu').value='';shelf()};$('#shu').onchange=shelf;['cols','shm','fcA','fcB','fcC'].forEach(id=>$('#'+id).oninput=shelf);
+  $('#shelf').innerHTML=(u0?[u0]:us).map(x=>{const a=L.filter(i=>i.uom===x&&(!q||cn(i.n).includes(q)));if(q&&!a.length)return '';
+    return `<div class="bu"><b>Quy cách: ${esc(x)}</b> <span class="mut">${a.length} SKU</span></div>`+band('Sản phẩm mới',a.filter(i=>i.st==='new'),'bn')+gondolas(a.filter(i=>!i.st).sort((p,q)=>K[p.k]-K[q.k]||q.upsd-p.upsd),Wl,M,F)+band('Deadstock',a.filter(i=>i.st==='dead'),'bdead')}).join('')||(q?'<p class="mut">Không có sản phẩm nào khớp tên đã nhập.</p>':'<p class="mut">Chưa có dữ liệu.</p>')}
+$('#shc').onchange=()=>{$('#shu').value='';shelf()};$('#shu').onchange=shelf;['cols','shm','fcA','fcB','fcC','shb'].forEach(id=>$('#'+id).oninput=shelf);
 ['scope','days','pa','pb'].forEach(id=>$('#'+id).onchange=analyze);
 
 async function save(wb,name){
