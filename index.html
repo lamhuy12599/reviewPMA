@@ -59,6 +59,12 @@ tr.cl{cursor:pointer}
 .tg.new{background:var(--er)}.tg.dead{background:#6b6b66}
 .t.new{border:2px solid var(--er)}
 .t.dead{background:#ececea;color:#55554f}
+.fq{font-size:11px;font-weight:700;background:#fff;border-radius:4px;padding:1px 5px}
+.gd{grid-template-columns:repeat(var(--cols),minmax(72px,1fr));min-width:calc(var(--cols)*74px)}
+.gd>div:empty{background:rgba(0,0,0,.05);border-radius:6px}
+.gd>div.nb{background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(0,0,0,.07) 4px 8px)}
+.mm{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--mut)}
+.fc{display:flex;min-width:0}.fc .t{flex:1}
 [hidden]{display:none!important}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.two{grid-template-columns:1fr}}
 .bu{margin:16px 0 4px;padding:6px 10px;font-size:14px;background:var(--bg);border:1px solid var(--bd);border-radius:8px}
@@ -96,8 +102,8 @@ tr.cl{cursor:pointer}
     <div class="wrap"><table id="dt"></table></div><p class="mut" id="more"></p></section>
   <section class="card"><h2>Hành động theo quy tắc công ty</h2><div class="act" id="act"></div></section>
   <section class="card" id="shs"><h2>Sơ đồ trưng bày kệ (demo)</h2>
-    <div class="grid"><label>Category<select id="shc"></select></label><label>Quy cách (Base UOM)<select id="shu"></select></label><label>Số ô mỗi tầng kệ<input type="number" id="cols" value="5" min="2" max="12"></label></div>
-    <p class="mut" style="margin:0 0 8px">Lọc theo Category → quy cách (Base UOM) → xếp theo hạng ABC. Trong mỗi quy cách: hàng mới ở trên cùng, rồi A → B → C theo đường chéo từ góc trên-trái (sweet spot), Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, tên sản phẩm, 6 số cuối barcode và UPSD.</p>
+    <div class="grid"><label>Category<select id="shc"></select></label><label>Quy cách (Base UOM)<select id="shu"></select></label><label>Số mâm / gondola<input type="number" id="shm" value="5" min="1" max="12"></label><label>Độ rộng từng mâm (facing)<input type="text" id="cols" value="12" placeholder="VD: 12,12,10,8" inputmode="numeric"></label><label>Facing mỗi SKU nhóm A<input type="number" id="fcA" value="3" min="1" max="12"></label><label>Facing mỗi SKU nhóm B<input type="number" id="fcB" value="2" min="1" max="12"></label><label>Facing mỗi SKU nhóm C<input type="number" id="fcC" value="1" min="1" max="12"></label></div>
+    <p class="mut" style="margin:0 0 8px">Lọc theo Category → quy cách (Base UOM) → xếp theo hạng ABC. Mỗi quy cách chia thành các gondola (theo số mâm và độ rộng mâm tính bằng facing); mỗi SKU chiếm số facing theo hạng A, B, C và được xếp từ góc trên-trái (sweet spot). Hàng mới ở trên cùng, Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, số facing (×n), tên sản phẩm, 6 số cuối barcode và UPSD. Độ rộng mâm: nhập 1 số để áp dụng cho mọi mâm, hoặc nhiều số cách nhau bằng dấu phẩy cho từng mâm từ trên xuống (VD 12,12,10,8; thiếu thì lấy số cuối).</p>
     <div id="shelf"></div></section>
 </div>
 </main>
@@ -212,9 +218,9 @@ function list(){
   $('#more').textContent=L.length>200?`Hiển thị 200/${L.length} sản phẩm. Báo cáo Excel có đầy đủ.`:`${L.length} sản phẩm`}
 ['fs','fk','fg'].forEach(id=>$('#'+id).oninput=list);
 
-function tile(i){
+function tile(i,f){
   const t=i.st==='new'?'<span class="tg new">NEW</span>':i.st==='dead'?'<span class="tg dead">DEADSTOCK</span>':'';
-  return `<div class="t c${i.k}${i.st?' '+i.st:''}"><div class="th"><span class="l">${i.k==='N'?'NEW':i.k}</span>${t}</div><div class="nm">${esc(i.n)}</div><div class="bc">${i.b?esc(String(i.b).slice(-6)):(P.m.b>=0||prod)?'Chưa có barcode':(P.m.ns>=0&&i.ns?fmt(i.ns)+' cửa hàng':esc(i.c))}</div><div class="u">UPSD ${fmt(i.upsd)}</div></div>`}
+  return `<div class="t c${i.k}${i.st?' '+i.st:''}"><div class="th"><span class="l">${i.k==='N'?'NEW':i.k}</span>${f?`<span class="fq">×${f}</span>`:''}${t}</div><div class="nm">${esc(i.n)}</div><div class="bc">${i.b?esc(String(i.b).slice(-6)):(P.m.b>=0||prod)?'Chưa có barcode':(P.m.ns>=0&&i.ns?fmt(i.ns)+' cửa hàng':esc(i.c))}</div><div class="u">UPSD ${fmt(i.upsd)}</div></div>`}
 function bandGrid(a,n){
   if(!a.length)return '';const R=Math.ceil(a.length/n),cells=[];
   for(let r=0;r<R;r++)for(let c=0;c<n;c++)cells.push([r,c]);
@@ -222,16 +228,34 @@ function bandGrid(a,n){
   cells.sort((x,y)=>cost(...x)-cost(...y)||x[0]-y[0]||x[1]-y[1]);
   const g=Array(R*n).fill('<div></div>');a.forEach((it,ix)=>{const [r,c]=cells[ix];g[r*n+c]=tile(it)});
   return `<div class="band"><b>Kệ chính: sweet spot A → B → C</b> <span class="mut">${a.length} SKU · ${R} tầng × ${n} ô</span></div><div class="wrap"><div class="shelf bm" style="--cols:${n}">${g.join('')}</div></div>`}
+function gondolas(a,Wl,M,F){const W=Math.max(...Wl),cap=Wl.reduce((s,x)=>s+x,0);
+  if(!a.length)return '';
+  const G=[],cnt={A:0,B:0,C:0},fq={A:0,B:0,C:0},
+    put=(g,it,f)=>{let b=null;
+      for(let r=0;r<M;r++)for(let c=0;c+f<=Wl[r];c++){
+        if(g[r].slice(c,c+f).some(x=>x))continue;
+        const k=(M>1?r/(M-1):0)+(W>1?c/(W-1):0);
+        if(!b||k<b[0])b=[k,r,c]}
+      if(!b)return false;
+      for(let j=0;j<f;j++)g[b[1]][b[2]+j]={};
+      g[b[1]][b[2]]={s:1,it,f};return true};
+  a.forEach(it=>{const f=Math.min(W,F[it.k]||1);cnt[it.k]++;fq[it.k]+=f;
+    if(!G.some(g=>put(g,it,f))){const g=Array.from({length:M},(_,r)=>Array.from({length:W},(_,c)=>c<Wl[r]?null:{x:1}));G.push(g);put(g,it,f)}});
+  const gh=G.map((g,gi)=>{
+    const used=g.flat().reduce((s,x)=>s+(x&&x.s?x.f:0),0),
+      rows=g.map((row,r)=>`<div class="mm">Mâm ${r+1}</div>`+row.map(x=>x?(x.s?`<div class="fc" style="grid-column:span ${x.f}">${tile(x.it,x.f)}</div>`:x.x?'<div class="nb"></div>':''):'<div></div>').join('')).join('');
+    return `<div class="band"><b>Gondola ${gi+1}</b> <span class="mut">${M} mâm · rộng ${new Set(Wl).size===1?Wl[0]:Wl.join('/')} facing · dùng ${used}/${cap}</span></div><div class="wrap"><div class="shelf gd" style="--cols:${W}">${rows}</div></div>`}).join('');
+  return `<div class="band"><b>Kệ chính: sweet spot A → B → C</b> <span class="mut">${a.length} SKU · ${G.length} gondola · A ${cnt.A} SKU/${fq.A} facing · B ${cnt.B} SKU/${fq.B} facing · C ${cnt.C} SKU/${fq.C} facing</span></div>${gh}`}
 const UO=a=>[...new Set(a.map(i=>i.uom))].sort((x,y)=>x.localeCompare(y,'vi'));
 function shelf(){
-  const c0=$('#shc').value,n=Math.max(2,Math.min(12,+$('#cols').value||5)),L=items.filter(i=>i.cat===c0),us=UO(L),pu=$('#shu').value,CAP=400,K={A:0,B:1,C:2};
+  const c0=$('#shc').value,iv=(id,d)=>Math.max(1,Math.min(12,Math.round(+$('#'+id).value)||d)),M=iv('shm',5),ws=($('#cols').value.match(/\d+/g)||[]).map(x=>Math.max(1,Math.min(40,+x))),Wl=Array.from({length:M},(_,r)=>ws.length?ws[Math.min(r,ws.length-1)]:12),n=Math.max(...Wl),F={A:iv('fcA',3),B:iv('fcB',2),C:iv('fcC',1)},L=items.filter(i=>i.cat===c0),us=UO(L),pu=$('#shu').value,CAP=400,K={A:0,B:1,C:2};
   $('#shu').innerHTML='<option value="">Tất cả quy cách ('+us.length+')</option>'+us.map(u=>`<option>${esc(u)}</option>`).join('');
   if(us.includes(pu))$('#shu').value=pu;
   const u0=$('#shu').value,
-    band=(t,a,c)=>a.length?`<div class="band ${c}"><b>${t}</b> <span class="mut">${a.length} SKU${a.length>CAP?' · hiển thị '+CAP:''}</span></div><div class="wrap"><div class="shelf ${c}" style="--cols:${n}">${a.slice(0,CAP).map(tile).join('')}</div></div>`:'';
+    band=(t,a,c)=>a.length?`<div class="band ${c}"><b>${t}</b> <span class="mut">${a.length} SKU${a.length>CAP?' · hiển thị '+CAP:''}</span></div><div class="wrap"><div class="shelf ${c}" style="--cols:${Math.min(n,6)}">${a.slice(0,CAP).map(x=>tile(x)).join('')}</div></div>`:'';
   $('#shelf').innerHTML=(u0?[u0]:us).map(x=>{const a=L.filter(i=>i.uom===x);
-    return `<div class="bu"><b>Quy cách: ${esc(x)}</b> <span class="mut">${a.length} SKU</span></div>`+band('Sản phẩm mới',a.filter(i=>i.st==='new'),'bn')+bandGrid(a.filter(i=>!i.st).sort((p,q)=>K[p.k]-K[q.k]||q.upsd-p.upsd),n)+band('Deadstock',a.filter(i=>i.st==='dead'),'bdead')}).join('')||'<p class="mut">Chưa có dữ liệu.</p>'}
-$('#shc').onchange=()=>{$('#shu').value='';shelf()};$('#shu').onchange=shelf;$('#cols').oninput=shelf;
+    return `<div class="bu"><b>Quy cách: ${esc(x)}</b> <span class="mut">${a.length} SKU</span></div>`+band('Sản phẩm mới',a.filter(i=>i.st==='new'),'bn')+gondolas(a.filter(i=>!i.st).sort((p,q)=>K[p.k]-K[q.k]||q.upsd-p.upsd),Wl,M,F)+band('Deadstock',a.filter(i=>i.st==='dead'),'bdead')}).join('')||'<p class="mut">Chưa có dữ liệu.</p>'}
+$('#shc').onchange=()=>{$('#shu').value='';shelf()};$('#shu').onchange=shelf;['cols','shm','fcA','fcB','fcC'].forEach(id=>$('#'+id).oninput=shelf);
 ['scope','days','pa','pb'].forEach(id=>$('#'+id).onchange=analyze);
 
 async function save(wb,name){
