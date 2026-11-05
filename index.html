@@ -53,20 +53,23 @@ tr.cl{cursor:pointer}
 .t .th{display:flex;align-items:center;justify-content:space-between;gap:4px}
 .t .l{font-size:26px;font-weight:800;line-height:1}
 .t .nm{font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word}
-.t .bc{font-size:10px;opacity:.75;word-break:break-all}
+.t .bc{font-size:13px;font-weight:700;letter-spacing:.04em;word-break:break-all}
 .t .u{font-weight:700;margin-top:auto}
 .tg{font-size:9px;font-weight:700;border-radius:4px;padding:1px 4px;color:#fff}
 .tg.new{background:var(--er)}.tg.dead{background:#6b6b66}
 .t.new{border:2px solid var(--er)}
 .t.dead{background:#ececea;color:#55554f}
 [hidden]{display:none!important}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.two{grid-template-columns:1fr}}
+.bu{margin:16px 0 4px;padding:6px 10px;font-size:14px;background:var(--bg);border:1px solid var(--bd);border-radius:8px}
 </style>
 </head>
 <body>
 <header><div class="stripe"></div><div class="in"><h1>ABC Product Analysis</h1><p>Phân loại sản phẩm A–B–C theo quy tắc của công ty</p></div></header>
 <main>
 <section class="card">
-  <label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls,.csv" hidden><b>Chọn file dữ liệu gốc</b><span>.xlsx, .xls hoặc .csv — hoặc kéo thả vào đây</span></label>
+  <div class="two"><label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls,.csv" multiple hidden><b>1. File ABC (dữ liệu bán hàng)</b><span>.xlsx, .xls hoặc .csv — chọn hoặc kéo thả</span></label>
+  <label class="drop" id="drop2"><input type="file" id="file2" accept=".xlsx,.xls,.csv" multiple hidden><b>2. File Product (tham chiếu)</b><span id="fn2">Chỉ lấy Barcode (Base Upc) và Base UOM — chọn hoặc kéo thả</span></label></div>
   <div class="row"><button class="ghost" id="sample" hidden>Tải file mẫu</button><span class="mut" id="fn"></span></div>
   <p class="err" id="err" hidden></p>
 </section>
@@ -93,8 +96,8 @@ tr.cl{cursor:pointer}
     <div class="wrap"><table id="dt"></table></div><p class="mut" id="more"></p></section>
   <section class="card"><h2>Hành động theo quy tắc công ty</h2><div class="act" id="act"></div></section>
   <section class="card" id="shs"><h2>Sơ đồ trưng bày kệ (demo)</h2>
-    <div class="grid"><label id="lshg">Nhóm hiển thị<select id="shg"></select></label><label>Số ô mỗi tầng kệ<input type="number" id="cols" value="5" min="2" max="12"></label></div>
-    <p class="mut" style="margin:0 0 8px">Sweet spot: góc trên-trái, theo đường chéo. A nằm gần góc trên-trái nhất, rồi B, C xa dần về góc dưới-phải. Hàng mới (không xếp hạng ABC) ở trên cùng, Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, tên sản phẩm, barcode (hoặc số cửa hàng) và UPSD.</p>
+    <div class="grid"><label>Category<select id="shc"></select></label><label>Quy cách (Base UOM)<select id="shu"></select></label><label>Số ô mỗi tầng kệ<input type="number" id="cols" value="5" min="2" max="12"></label></div>
+    <p class="mut" style="margin:0 0 8px">Lọc theo Category → quy cách (Base UOM) → xếp theo hạng ABC. Trong mỗi quy cách: hàng mới ở trên cùng, rồi A → B → C theo đường chéo từ góc trên-trái (sweet spot), Deadstock ở dưới cùng. Mỗi ô gồm hạng ABC, tên sản phẩm, 6 số cuối barcode và UPSD.</p>
     <div id="shelf"></div></section>
 </div>
 </main>
@@ -106,7 +109,7 @@ const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&'
 const nrm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
 const KEYS=[['n','Tên sản phẩm'],['g','Group'],['c','Category'],['s','Subcategory'],['q','Tổng số lượng 4 tuần (UPSD = SL ÷ số ngày)'],['b','Barcode (không bắt buộc)'],['w','Trạng thái (New / Dead / Deleted Item)'],['wo','Write-off 4 tuần'],['mk','MKT UPSD'],['ns','Số lượng cửa hàng']];
 const SC={all:'Toàn bộ danh sách',g:'Group',c:'Category',s:'Subcategory'};
-let head=[],data=[],fname='',items=[],groups=[],dl=null,P={};
+let head=[],data=[],fname='',items=[],groups=[],dl=null,P={},prod=null;
 const pct=(a,b)=>b?(a/b*100).toFixed(1)+'%':'0%';
 const fmt=v=>Number.isInteger(v)?v.toLocaleString('vi-VN'):v.toLocaleString('vi-VN',{maximumFractionDigits:2});
 function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
@@ -118,10 +121,25 @@ function num(v){if(typeof v==='number')return v;let s=String(v).trim();if(!s)ret
   if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(/,/g,'');
   const n=parseFloat(s.replace(/[^\d.-]/g,''));return isNaN(n)?0:n}
 
-async function pick(f){if(!f)return;err('');
-  try{const wb=/\.csv$/i.test(f.name)?XLSX.read(await f.text(),{type:'string'}):XLSX.read(await f.arrayBuffer(),{type:'array'});
-    init(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}),f.name)}
-  catch(x){err('Không đọc được file: '+x.message)}}
+const cn=s=>nrm(s).replace(/\s+/g,' ').trim();
+async function rd(f){return /\.csv$/i.test(f.name)?XLSX.read(await f.text(),{type:'string'}):XLSX.read(await f.arrayBuffer(),{type:'array'})}
+function readP(a,name){
+  const hi=a.slice(0,15).findIndex(r=>r.some(c=>/base\s*uom/i.test(String(c))));if(hi<0)return false;
+  const H=a[hi].map(nrm),ix=re=>H.findIndex(h=>re.test(h)),
+    k={n:ix(/short name|^ten/),u:ix(/base uom/),b:ix(/base upc|barcode/)},
+    t=(r,i)=>i>=0?String(r[i]===undefined?'':r[i]).trim():'';
+  prod={name,n:0,nm:new Map()};
+  a.slice(hi+1).forEach(r=>{const n=t(r,k.n);if(!n)return;
+    const p={n,u:t(r,k.u),b:t(r,k.b)};
+    prod.n++;
+    const key=cn(n);if(!prod.nm.has(key))prod.nm.set(key,p)});
+  return true}
+function look(n){return prod?prod.nm.get(cn(n))||null:null}
+async function pick(fs){err('');
+  for(const f of [...(fs||[])]){
+    try{const a=XLSX.utils.sheet_to_json((x=>x.Sheets[x.SheetNames[0]])(await rd(f)),{header:1,defval:''});
+      if(readP(a,f.name)){$('#fn2').textContent='✓ '+f.name+' · '+prod.n+' sản phẩm';if(data.length)analyze()}else init(a,f.name)}
+    catch(x){err('Không đọc được file '+f.name+': '+x.message)}}}
 
 function init(a,name){
   a=a.filter(r=>r.some(c=>String(c).trim()));if(a.length<2)return err('File không có dữ liệu.');
@@ -153,8 +171,8 @@ function analyze(){
     const st=stat(txt(r,'w'));if(st==='del'){nDel++;return}
     const g=txt(r,'g'),c=txt(r,'c'),s=txt(r,'s'),key=[n,g,c,s].join('|'),q=num(r[m.q]),b=txt(r,'b'),o=agg.get(key);
     if(o){o.q+=q;o.wo+=nv(r,'wo');if(!o.b)o.b=b;if(st==='new')o.nw=true;if(st==='dead')o.dd=true}
-    else agg.set(key,{n,g,c,s,q,b,nw:st==='new',dd:st==='dead',wo:nv(r,'wo'),mk:nv(r,'mk'),ns:nv(r,'ns')})});
-  const by=new Map();[...agg.values()].forEach(i=>{const gk=sc==='all'?'Toàn bộ':(i[sc]||'(trống)');i.grp=gk;if(!by.has(gk))by.set(gk,[]);by.get(gk).push(i)});
+    else{const p=look(n);agg.set(key,{n,g,c,s,q,b:(p&&p.b)||b,u:p?p.u:'',nw:st==='new',dd:st==='dead',wo:nv(r,'wo'),mk:nv(r,'mk'),ns:nv(r,'ns')})}});
+  const by=new Map();[...agg.values()].forEach(i=>{const gk=sc==='all'?'Toàn bộ':(i[sc]||'(trống)');i.grp=gk;i.cat=i.c||'(trống)';i.uom=i.u||(prod?'(Không khớp product)':'(Chưa có)');if(!by.has(gk))by.set(gk,[]);by.get(gk).push(i)});
   items=[];groups=[];
   [...by.keys()].sort((x,y)=>x.localeCompare(y,'vi')).forEach(gk=>{
     const L=by.get(gk).sort((x,y)=>y.q-x.q||x.n.localeCompare(y.n,'vi')),T=L.filter(i=>!i.nw).reduce((s,i)=>s+Math.max(i.q,0),0);let cum=0;
@@ -178,12 +196,12 @@ function render(){
   $('#act').innerHTML=`<div class="cA"><b>Nhóm A</b> (${P.A}% doanh số, ${cs.A.n} SKU)<ul><li>Trưng bày vị trí tốt nhất (sweet spot), tăng facing</li><li>Duy trì facing, trữ hàng đầy đủ; luôn có hàng</li></ul></div>
   <div class="cB"><b>Nhóm B</b> (${P.B}% doanh số, ${cs.B.n} SKU)<ul><li>Trưng bày các vị trí tiếp theo, duy trì facing và trữ hàng tối thiểu</li></ul></div>
   <div class="cC"><b>Nhóm C</b> (${P.C}% doanh số, ${cs.C.n} SKU)<ul><li>Trưng bày các vị trí còn lại, giảm facing tối thiểu</li><li>Review và rotate trưng bày mỗi tháng; xem xét remove nếu không đủ performance sau 1 tháng${z?`. Hiện có <b>${z}</b> SKU không bán được trong kỳ`:''}</li></ul></div>`;
-  const pv=$('#shg').value;$('#shg').innerHTML=groups.map(g=>`<option>${esc(g.name)}</option>`).join('');if(groups.some(g=>g.name===pv))$('#shg').value=pv;$('#lshg').hidden=P.sc==='all';
+  const pc=$('#shc').value,cats=[...new Set(items.map(i=>i.cat))].sort((a,b)=>a.localeCompare(b,'vi'));$('#shc').innerHTML=cats.map(c=>`<option>${esc(c)}</option>`).join('');if(cats.includes(pc))$('#shc').value=pc;
   list();shelf()}
 
 function list(){
   const q=nrm($('#fs').value),k=$('#fk').value,g=$('#fg').value,m=P.m;
-  const cols=[['rank','#','n'],['n','Sản phẩm','p'],['b','Barcode'],['g','Group'],['c','Category'],['s','Subcategory'],['st','Trạng thái'],['ns','Cửa hàng','n'],['q','SL bán','n'],['upsd','UPSD','n'],['mk','MKT UPSD','n'],['wo','WO','n'],['sh','% DS','n'],['cum','% lũy kế','n'],['k','Hạng']].filter(c=>c[0]==='st'?m.w>=0:!{g:1,c:1,s:1,b:1,ns:1,mk:1,wo:1}[c[0]]||m[c[0]]>=0);
+  const cols=[['rank','#','n'],['n','Sản phẩm','p'],['b','Barcode'],['u','UOM'],['g','Group'],['c','Category'],['s','Subcategory'],['st','Trạng thái'],['ns','Cửa hàng','n'],['q','SL bán','n'],['upsd','UPSD','n'],['mk','MKT UPSD','n'],['wo','WO','n'],['sh','% DS','n'],['cum','% lũy kế','n'],['k','Hạng']].filter(c=>c[0]==='st'?m.w>=0:c[0]==='u'?!!prod:c[0]==='b'?(m.b>=0||!!prod):!{g:1,c:1,s:1,ns:1,mk:1,wo:1}[c[0]]||m[c[0]]>=0);
   const L=items.filter(i=>(!q||nrm(i.n).includes(q))&&(!g||i.grp===g)&&(!k||(k==='0'?i.q<=0:i.k===k)));
   $('#dt').innerHTML='<tr>'+cols.map(c=>`<th class="${c[2]||''}">${c[1]}</th>`).join('')+'</tr>'+L.slice(0,200).map(i=>'<tr>'+cols.map(c=>{const v=i[c[0]];
     if(c[0]==='k')return `<td><span class="bd c${v}">${v}</span></td>`;
@@ -196,7 +214,7 @@ function list(){
 
 function tile(i){
   const t=i.st==='new'?'<span class="tg new">NEW</span>':i.st==='dead'?'<span class="tg dead">DEADSTOCK</span>':'';
-  return `<div class="t c${i.k}${i.st?' '+i.st:''}"><div class="th"><span class="l">${i.k==='N'?'NEW':i.k}</span>${t}</div><div class="nm">${esc(i.n)}</div><div class="bc">${P.m.b>=0?(esc(i.b)||'Chưa có barcode'):(P.m.ns>=0&&i.ns?fmt(i.ns)+' cửa hàng':esc(i.c))}</div><div class="u">UPSD ${fmt(i.upsd)}</div></div>`}
+  return `<div class="t c${i.k}${i.st?' '+i.st:''}"><div class="th"><span class="l">${i.k==='N'?'NEW':i.k}</span>${t}</div><div class="nm">${esc(i.n)}</div><div class="bc">${i.b?esc(String(i.b).slice(-6)):(P.m.b>=0||prod)?'Chưa có barcode':(P.m.ns>=0&&i.ns?fmt(i.ns)+' cửa hàng':esc(i.c))}</div><div class="u">UPSD ${fmt(i.upsd)}</div></div>`}
 function bandGrid(a,n){
   if(!a.length)return '';const R=Math.ceil(a.length/n),cells=[];
   for(let r=0;r<R;r++)for(let c=0;c<n;c++)cells.push([r,c]);
@@ -204,11 +222,16 @@ function bandGrid(a,n){
   cells.sort((x,y)=>cost(...x)-cost(...y)||x[0]-y[0]||x[1]-y[1]);
   const g=Array(R*n).fill('<div></div>');a.forEach((it,ix)=>{const [r,c]=cells[ix];g[r*n+c]=tile(it)});
   return `<div class="band"><b>Kệ chính: sweet spot A → B → C</b> <span class="mut">${a.length} SKU · ${R} tầng × ${n} ô</span></div><div class="wrap"><div class="shelf bm" style="--cols:${n}">${g.join('')}</div></div>`}
+const UO=a=>[...new Set(a.map(i=>i.uom))].sort((x,y)=>x.localeCompare(y,'vi'));
 function shelf(){
-  const g=$('#shg').value,n=Math.max(2,Math.min(12,+$('#cols').value||5)),L=items.filter(i=>i.grp===g),CAP=400;
-  const band=(t,a,c)=>a.length?`<div class="band ${c}"><b>${t}</b> <span class="mut">${a.length} SKU${a.length>CAP?' · hiển thị '+CAP:''}</span></div><div class="wrap"><div class="shelf ${c}" style="--cols:${n}">${a.slice(0,CAP).map(tile).join('')}</div></div>`:'';
-  $('#shelf').innerHTML=band('Sản phẩm mới',L.filter(i=>i.st==='new'),'bn')+bandGrid(L.filter(i=>!i.st),n)+band('Deadstock',L.filter(i=>i.st==='dead'),'bdead')||'<p class="mut">Chưa có dữ liệu.</p>'}
-$('#shg').onchange=shelf;$('#cols').oninput=shelf;
+  const c0=$('#shc').value,n=Math.max(2,Math.min(12,+$('#cols').value||5)),L=items.filter(i=>i.cat===c0),us=UO(L),pu=$('#shu').value,CAP=400,K={A:0,B:1,C:2};
+  $('#shu').innerHTML='<option value="">Tất cả quy cách ('+us.length+')</option>'+us.map(u=>`<option>${esc(u)}</option>`).join('');
+  if(us.includes(pu))$('#shu').value=pu;
+  const u0=$('#shu').value,
+    band=(t,a,c)=>a.length?`<div class="band ${c}"><b>${t}</b> <span class="mut">${a.length} SKU${a.length>CAP?' · hiển thị '+CAP:''}</span></div><div class="wrap"><div class="shelf ${c}" style="--cols:${n}">${a.slice(0,CAP).map(tile).join('')}</div></div>`:'';
+  $('#shelf').innerHTML=(u0?[u0]:us).map(x=>{const a=L.filter(i=>i.uom===x);
+    return `<div class="bu"><b>Quy cách: ${esc(x)}</b> <span class="mut">${a.length} SKU</span></div>`+band('Sản phẩm mới',a.filter(i=>i.st==='new'),'bn')+bandGrid(a.filter(i=>!i.st).sort((p,q)=>K[p.k]-K[q.k]||q.upsd-p.upsd),n)+band('Deadstock',a.filter(i=>i.st==='dead'),'bdead')}).join('')||'<p class="mut">Chưa có dữ liệu.</p>'}
+$('#shc').onchange=()=>{$('#shu').value='';shelf()};$('#shu').onchange=shelf;$('#cols').oninput=shelf;
 ['scope','days','pa','pb'].forEach(id=>$('#'+id).onchange=analyze);
 
 async function save(wb,name){
@@ -223,9 +246,9 @@ function exp(){
   ['A','B','C'].forEach(k=>ov.push([k,cs[k].n,+(cs[k].n/items.length*100).toFixed(1),cs[k].q,+(P.T?cs[k].q/P.T*100:0).toFixed(1),+(cs[k].q/P.days).toFixed(2)]));
   XLSX.utils.book_append_sheet(wb,sheet(ov,[38,18,10,14,12,14]),'Tổng quan');
   XLSX.utils.book_append_sheet(wb,sheet([[SC[P.sc],'Số SKU','Nhóm A','Nhóm B','Nhóm C','SKU không bán','Tổng SL bán']].concat(groups.map(g=>[g.name,g.n,g.A,g.B,g.C,g.z,g.q])),[34,10,10,10,10,14,12]),'Theo nhóm');
-  const m=P.m,CD=[['Nhóm phân tích',i=>i.grp,24],['Thứ hạng',i=>i.rank,9],['Tên sản phẩm',i=>i.n,42],['Barcode',i=>i.b,16,'b'],['Group',i=>i.g,16,'g'],['Category',i=>i.c,20,'c'],['Subcategory',i=>i.s,20,'s'],
+  const m=P.m,CD=[['Nhóm phân tích',i=>i.grp,24],['Thứ hạng',i=>i.rank,9],['Tên sản phẩm',i=>i.n,42],['Barcode',i=>i.b,16,'b'],['Quy cách (Base UOM)',i=>i.u,16,'u'],['Group',i=>i.g,16,'g'],['Category',i=>i.c,20,'c'],['Subcategory',i=>i.s,20,'s'],
     ['Trạng thái',i=>i.st==='new'?'New':i.st==='dead'?'Deadstock':'',12],['Số cửa hàng',i=>i.ns,12,'ns'],['SL bán',i=>i.q,10],['UPSD',i=>+i.upsd.toFixed(2),9],['MKT UPSD',i=>+i.mk.toFixed(2),11,'mk'],['WO 4 tuần',i=>i.wo,11,'wo'],
-    ['% doanh số',i=>+i.sh.toFixed(2),11],['% lũy kế',i=>+i.cum.toFixed(2),10],['Hạng ABC',i=>i.k,9]].filter(c=>!c[3]||m[c[3]]>=0),
+    ['% doanh số',i=>+i.sh.toFixed(2),11],['% lũy kế',i=>+i.cum.toFixed(2),10],['Hạng ABC',i=>i.k,9]].filter(c=>!c[3]||(c[3]==='b'?(m.b>=0||!!prod):c[3]==='u'?!!prod:m[c[3]]>=0)),
     hd=CD.map(c=>c[0]),row=i=>CD.map(c=>c[1](i)),w=CD.map(c=>c[2]);
   XLSX.utils.book_append_sheet(wb,sheet([hd].concat(items.map(row)),w),'Chi tiết ABC');
   XLSX.utils.book_append_sheet(wb,sheet([hd].concat(items.filter(i=>i.q<=0).map(row)),w),'Không bán được');
@@ -240,10 +263,10 @@ $('#sample').onclick=()=>{
   ['Tổng Doanh số','','','','','','','','',241,'','']];
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,sheet(r,[34,12,22,14,8,6,6,6,12,12,10,12]),'ABC Weekly');save(wb,'File_mau_ABC.xlsx')};
 
-const dz=$('#drop');
-$('#file').onchange=e=>pick(e.target.files[0]);
-dz.ondragover=e=>{e.preventDefault();dz.classList.add('on')};dz.ondragleave=()=>dz.classList.remove('on');
-dz.ondrop=e=>{e.preventDefault();dz.classList.remove('on');pick(e.dataTransfer.files[0])};
+[['drop','file'],['drop2','file2']].forEach(([d,f])=>{const z=$('#'+d);
+  $('#'+f).onchange=e=>{pick(e.target.files);e.target.value=''};
+  z.ondragover=e=>{e.preventDefault();z.classList.add('on')};z.ondragleave=()=>z.classList.remove('on');
+  z.ondrop=e=>{e.preventDefault();z.classList.remove('on');pick(e.dataTransfer.files)}});
 </script>
 </body>
 </html>
